@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TenderFlow.AI - RFP Agents Demo</title>
+    <style>
+      body { font-family: Inter, system-ui, Arial, sans-serif; margin: 24px; }
+      h1 { margin-top: 0; }
+      button { padding: 8px 14px; margin-right: 8px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #ddd; padding: 8px; }
+      th { background: #f5f5f5; text-align: left; }
+      .pill { display: inline-block; padding: 2px 6px; border-radius: 6px; background: #eef; }
+      .match { font-weight: bold; color: #0a7; }
+    </style>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  </head>
+  <body>
+    <h1>TenderFlow.AI</h1>
+    <p>End-to-end demo: Sales Agent → Technical Agent → Pricing Agent.</p>
+    <div id="app"></div>
+
+    <script type="text/javascript">
+      const e = React.createElement;
+
+      function useAsyncState(initial) {
+        const [state, setState] = React.useState(initial);
+        const set = (patch) => setState(prev => ({ ...prev, ...patch }));
+        return [state, set];
+      }
+
+      function Section({ title, children }) {
+        return e('section', null, [
+          e('h2', { key: 'h' }, title),
+          e('div', { key: 'c' }, children)
+        ]);
+      }
+
+      function App() {
+        const [s, set] = useAsyncState({ rfps: [], selected: null, result: null, loading: false });
+
+        async function scan() {
+          set({ loading: true });
+          const resp = await fetch('/api/rfps/scan?months=3');
+          const data = await resp.json();
+          set({ loading: false, rfps: data.filtered?.length ? data.filtered : data.rfps, selected: data.selected });
+        }
+
+        async function runAll() {
+          set({ loading: true, result: null });
+          const resp = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ months: 3 }) });
+          const data = await resp.json();
+          set({ loading: false, result: data });
+        }
+
+        const rfpsTable = s.rfps?.length ? e('table', null, [
+          e('thead', { key: 'h' }, e('tr', null, [ 'Title', 'Due', 'Link' ].map((h,i)=>e('th',{key:i},h)))),
+          e('tbody', { key: 'b' }, s.rfps.map((r, i)=> e('tr', { key:i }, [
+            e('td', { key: 't' }, r.title || r.detailsUrl),
+            e('td', { key: 'd' }, r.dueText || r.dueDate),
+            e('td', { key: 'l' }, e('a', { href: r.detailsUrl, target: '_blank' }, 'Open'))
+          ])))
+        ]) : e('div', null, 'No RFPs yet');
+
+        const techTable = s.result?.technical?.perItem?.length ? e('table', null, [
+          e('thead', { key: 'h' }, e('tr', null, [ 'RFP Line', 'Description', 'Top 3 Recommendations (match %)' ].map((h,i)=>e('th',{key:i},h)))),
+          e('tbody', { key: 'b' }, s.result.technical.perItem.map((row, i)=> e('tr', { key:i }, [
+            e('td', null, row.rfpItem?.line_id),
+            e('td', null, row.rfpItem?.description),
+            e('td', null, row.recommendations.map((m, j)=> e('div', { key:j }, [
+              e('span', { className: 'pill' }, m.sku), ' ',
+              e('span', { className: 'match' }, m.match_percent + '%')
+            ])))
+          ])))
+        ]) : null;
+
+        const finalScope = s.result?.technical?.finalTable?.length ? e('table', null, [
+          e('thead', { key: 'h' }, e('tr', null, [ 'Line', 'Description', 'Length (m)', 'Qty', 'Chosen SKU', 'Match %' ].map((h,i)=>e('th',{key:i},h)))),
+          e('tbody', { key: 'b' }, s.result.technical.finalTable.map((r, i)=> e('tr', { key:i }, [
+            e('td', null, r.rfp_line_id),
+            e('td', null, r.description),
+            e('td', null, r.length_m),
+            e('td', null, r.quantity),
+            e('td', null, r.chosen_sku),
+            e('td', null, r.match_percent)
+          ])))
+        ]) : null;
+
+        const pricingTable = s.result?.pricing?.pricedItems?.length ? e('table', null, [
+          e('thead', { key: 'h' }, e('tr', null, [ 'Line', 'SKU', 'Unit Price', 'Length (m)', 'Qty', 'Material', 'Services', 'Line Total' ].map((h,i)=>e('th',{key:i},h)))),
+          e('tbody', { key: 'b' }, s.result.pricing.pricedItems.map((p, i)=> e('tr', { key:i }, [
+            e('td', null, p.rfp_line_id),
+            e('td', null, p.sku),
+            e('td', null, p.unitPrice.toFixed(2)),
+            e('td', null, p.length_m),
+            e('td', null, p.quantity),
+            e('td', null, p.materialCost.toFixed(2)),
+            e('td', null, p.servicesTotal.toFixed(2)),
+            e('td', null, p.lineTotal.toFixed(2))
+          ])))
+        ]) : null;
+
+        const totals = s.result?.pricing?.totals ? e('div', null, [
+          e('strong', { key: 't' }, 'Totals: '),
+          ` Material ₹${s.result.pricing.totals.material.toFixed(2)}`,
+          ` | Services ₹${s.result.pricing.totals.services.toFixed(2)}`,
+          ` | Grand Total ₹${s.result.pricing.totals.grandTotal.toFixed(2)}`
+        ]) : null;
+
+        return e('div', null, [
+          e('div', { key: 'actions' }, [
+            e('button', { onClick: scan, disabled: s.loading }, s.loading ? 'Scanning…' : 'Scan RFPs'),
+            e('button', { onClick: runAll, disabled: s.loading }, s.loading ? 'Running…' : 'Run End-to-End')
+          ]),
+          e(Section, { key: 'rfps', title: 'Identified RFPs' }, rfpsTable),
+          s.result ? e(Section, { key: 'sum', title: 'RFP Summary (derived)' }, [
+            e('pre', { key: 'p' }, JSON.stringify(s.result.summary, null, 2))
+          ]) : null,
+          s.result ? e(Section, { key: 'tech', title: 'Technical Recommendations' }, [techTable, finalScope]) : null,
+          s.result ? e(Section, { key: 'price', title: 'Pricing' }, [pricingTable, totals]) : null
+        ]);
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('app'));
+      root.render(React.createElement(App));
+    </script>
+  </body>
+</html>

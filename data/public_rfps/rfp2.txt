@@ -1,0 +1,1 @@
+RFP: Street Lighting Cable Supply\nScope of Supply:\n1. 1 core 16 sqmm Copper PVC unarmored cable, 1 kV, length 2000 m, Qty 3\n\nTesting and Acceptance:\n- Insulation Resistance\n- Conductor Resistance\n\nOther requirements:\n- Delivery within 4 weeks of PO\n
