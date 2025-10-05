@@ -1,0 +1,1 @@
+RFP: Supply of 11kV XLPE Armored Cables for Substation Upgrade\nScope of Supply:\n1. 3 core 185 sqmm Copper XLPE armored power cable, 11 kV, length 1000 m, Qty 1\n2. 3 core 120 sqmm Copper XLPE armored power cable, 11 kV, length 500 m, Qty 2\n\nTesting and Acceptance:\n- Insulation Resistance\n- High Voltage Test\n\nOther requirements:\n- Delivery within 8 weeks of LOI\n
